@@ -1,0 +1,67 @@
+version: '2'
+
+networks:
+  local_network:
+    driver: bridge
+
+services:
+  front:
+    container_name: front_container
+    build:
+      context: ./frontend
+      dockerfile: ./Dockerfile
+    image: front_image
+    ports:
+      - "80:80"
+    networks:
+      - local_network  
+    depends_on:
+      - backend
+    links:
+      - backend
+
+
+  backend:
+    container_name: backend_container
+    environment:
+      - DB_USERNAME=java
+      - DB_PASSWORD=java
+      - DB_URL=mysql_container
+      - DB_PORT=3306
+      - DB_NAME=java
+    build:
+      context: ./backend
+      dockerfile: ./Dockerfile
+    image: backend_image
+    ports:
+      - "8080:8080"
+    networks:
+      - local_network
+    depends_on:
+      - db
+    links:
+      - db
+
+  db:
+    networks:
+      - local_network
+    image: mysql:5.7
+    container_name: mysql_container
+    restart: always
+    environment:
+      - MYSQL_DATABASE=java
+      - MYSQL_USER=java
+      - MYSQL_PASSWORD=java
+      - MYSQL_ROOT_PASSWORD=password
+    ports:
+      - "3306:3306"
+    expose:
+      - '3306'
+    volumes:
+      - mydb:/var/lib/mysql
+
+
+volumes:
+  mydb:
+
+
