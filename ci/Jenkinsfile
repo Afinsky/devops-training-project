@@ -2,27 +2,65 @@ pipeline{
     agent{
         label "slave1"
     }
-    stages{
-        stage("Clean workspace"){
-            steps{
-                sh '''
-                ls -la
-                pwd
-                cd frontend
-                '''
-            }
-            post{
-                always{
-                    echo "========always========"
+
+
+    environment {
+      registry = "10.20.40.176:8084"
+    }
+
+    stages{ 
+
+
+        stage("Docker build images"){
+            parallel{
+                
+                stage("Docker build Front image"){
+                        steps{
+                                sh '''
+                                docker build -t 10.20.40.176:8084/frontapp -f docker/Dockerfile-front .
+                                '''
+                        }  
                 }
-                success{
-                    echo "========A executed successfully========"
+                
+                stage("Docker build Back image"){
+                        steps{
+                                sh '''
+                                docker build -t 10.20.40.176:8084/backapp -f docker/Dockerfile-back .
+                                '''  
+                        }  
                 }
-                failure{
-                    echo "========A execution failed========"
-                }
+            
             }
         }
+
+
+
+        stage("Docker pull images to Nexus registry"){
+            parallel{
+                
+                stage("Docker pull Front image"){
+                        steps{
+                            withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
+                                sh '''
+                                docker push 10.20.40.176:8084/frontapp
+                                '''
+                            }
+                        }  
+                }
+                
+                stage("Docker pull Back image"){
+                        steps{
+                            withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
+                                sh '''
+                                docker push 10.20.40.176:8084/backapp
+                                '''  
+                            }
+                        }  
+                }
+            
+            }
+        }
+
     }
     
     post{
