@@ -8,8 +8,8 @@ services:
   front:
     container_name: front_container
     build:
-      context: ./frontend
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: ./Dockerfile-front
     image: front_image
     ports:
       - "80:80"
@@ -30,8 +30,8 @@ services:
       - DB_PORT=3306
       - DB_NAME=java
     build:
-      context: ./backend
-      dockerfile: ./Dockerfile
+      context: .
+      dockerfile: ./Dockerfile-back
     image: backend_image
     ports:
       - "8080:8080"

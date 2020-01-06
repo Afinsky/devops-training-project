@@ -1,0 +1,6 @@
+To deploy local you should change in API_ROOT in ../frontend/src/agent.js 'https://appabotyan.test.coherentprojects.net/api' to 'http://your-ip-address/api' and change in nginx's config conf in proxy_pass 'http://internal-abotyan-back-alb-1344981131.us-east-1.elb.amazonaws.com' to 'backend_container:8080'
+
+
+From root project directory:
+
+docker-compose -f docker/docker-compose.yaml up -d
