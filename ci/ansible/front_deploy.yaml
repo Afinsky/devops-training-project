@@ -1,18 +1,41 @@
 ---
-    - hosts: tag_Name_abotyan_front
-      become: yes
+   - hosts: tag_Name_abotyan_front
+     become: yes
+     vars:
+       ansible_ssh_user: "ubuntu"
+       ansible_ssh_private_key_file: "~/.ssh/deploy_key"
+       ansible_python_interpreter: "/usr/bin/python3"
 
-      tasks:
-        - name: Docker front. Pull image from nexus
-          docker_image:
-            name: "10.20.40.176:8084/frontapp"
-            source: pull
 
-        - name: Docker front. Create container
-          docker_container:
-            name: fronapp_container
-            image: "10.20.40.176:8084/frontapp"
-            state: started
-            recreate: yes
-            ports:
-              - "80:80"
+     tasks:
+
+       - name: Install pip
+         apt:
+           name: python3-pip
+           state: present
+
+       - name: Install Docker Module for Python
+         pip:
+           name: docker
+
+
+       - name: Docker front. Login to registry
+         docker_login:
+           username: admin
+           password: testnexus
+           registry: http://10.20.40.176:8084
+
+
+       - name: Docker front. Pull image from nexus
+         docker_image:
+           name: "10.20.40.176:8084/frontapp"
+           source: pull
+
+       - name: Docker front. Create container
+         docker_container:
+           name: fronapp_container
+           image: "10.20.40.176:8084/frontapp"
+           state: started
+           recreate: yes
+           ports:
+             - "80:80"
