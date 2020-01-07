@@ -4,7 +4,7 @@ pipeline{
     }
 
 
-    environment {
+    environment{
       registry = "10.20.40.176:8084"
     }
 
@@ -35,10 +35,10 @@ pipeline{
 
 
 
-        stage("Docker pull images to Nexus registry"){
+        stage("Docker push images to Nexus registry"){
             parallel{
                 
-                stage("Docker pull Front image"){
+                stage("Docker push Front image"){
                         steps{
                             withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
                                 sh '''
@@ -48,7 +48,7 @@ pipeline{
                         }  
                 }
                 
-                stage("Docker pull Back image"){
+                stage("Docker push Back image"){
                         steps{
                             withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
                                 sh '''
@@ -61,17 +61,37 @@ pipeline{
             }
         }
 
+
+        stage("Deploy images from Nexus registry to front targets"){
+            steps{
+                
+                    withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
+                        sh "echo 'Docker login'"
+                    }
+
+                    withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]){
+                        script{
+                            aws_access_key_id = env.AWS_ACCESS_KEY_ID
+                            aws_secret_access_key = env.AWS_SECRET_ACCESS_KEY
+                        } 
+                    }
+                    
+                    ansiblePlaybook(become: true, becomeUser: 'ubuntu', colorized: true, credentialsId: 'ssh_deploy_key', disableHostKeyChecking: true, forks: 4, inventory: 'ci/ansible/ec2.py', playbook: 'ci/ansible/front_deploy.yaml')
+            }  
+        }
+
+
     }
     
-    post{
-        always{
-            echo "========always========"
+        post{
+            always{
+                echo "========always========"
+            }
+            success{
+                echo "========pipeline executed successfully ========"
+            }
+            failure{
+                echo "========pipeline execution failed========"
+            }
         }
-        success{
-            echo "========pipeline executed successfully ========"
-        }
-        failure{
-            echo "========pipeline execution failed========"
-        }
-    }
 }
