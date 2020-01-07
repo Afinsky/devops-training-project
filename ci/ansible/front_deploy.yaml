@@ -1,0 +1,18 @@
+---
+    - hosts: tag_Name_abotyan_front
+      become: yes
+
+      tasks:
+        - name: Docker front. Pull image from nexus
+          docker_image:
+            name: "10.20.40.176:8084/frontapp"
+            source: pull
+
+        - name: Docker front. Create container
+          docker_container:
+            name: fronapp_container
+            image: "10.20.40.176:8084/frontapp"
+            state: started
+            recreate: yes
+            ports:
+              - "80:80"
