@@ -1,8 +1,32 @@
 ---
     - hosts: tag_Name_abotyan_app
       become: yes
+      vars:
+        ansible_ssh_user: "ubuntu"
+        ansible_ssh_private_key_file: "~/.ssh/deploy_key"
+        ansible_python_interpreter: "/usr/bin/python3"
+
+
 
       tasks:
+
+        - name: Install pip
+          apt:
+            name: python3-pip
+            state: present
+
+        - name: Install Docker Module for Python
+          pip:
+            name: docker
+
+
+        - name: Docker back. Login to registry
+          docker_login:
+            username: "{{user}}"
+            password: "{{pass}}"
+            registry: "{{url}}"
+
+
         - name: Docker back. Pull image from nexus
           docker_image:
             name: "10.20.40.176:8084/backapp"
@@ -17,8 +41,8 @@
             ports:
               - "8080:8080"
             env:
-              DB_USERNAME: "{{DB_USERNAME}}"
-              DB_PASSWORD: "{{DB_PASSWORD}}"
-              DB_URL: "{{DB_URL}}"
-              DB_PORT: "{{DB_PORT}}"
-              DB_NAME: "{{DB_NAME}}"
+              DB_USERNAME: "{{db_username}}"
+              DB_PASSWORD: "{{db_password}}"
+              DB_URL: "{{db_url}}"
+              DB_PORT: "{{db_port}}"
+              DB_NAME: "{{db_name}}"

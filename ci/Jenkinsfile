@@ -64,17 +64,6 @@ pipeline{
 
         stage("Deploy images from Nexus registry to front targets"){
             steps{
-                
-                    withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
-                        sh "echo 'Docker login'"
-                    }
-
-                    withCredentials([string(credentialsId: 'AWS_ACCESS_KEY_ID', variable: 'AWS_ACCESS_KEY_ID'), string(credentialsId: 'AWS_SECRET_ACCESS_KEY', variable: 'AWS_SECRET_ACCESS_KEY')]){
-                        script{
-                            aws_access_key_id = env.AWS_ACCESS_KEY_ID
-                            aws_secret_access_key = env.AWS_SECRET_ACCESS_KEY
-                        } 
-                    }
                     
                     withCredentials([string(credentialsId: 'NEXUS_USER_ID', variable: 'NEXUS_USER'), 
                         string(credentialsId: 'NEXUS_PASS_ID', variable: 'NEXUS_PASS'), 
@@ -83,6 +72,24 @@ pipeline{
                     }
             }  
         }
+
+
+        stage("Deploy images from Nexus registry to back targets"){
+            steps{
+
+                    withCredentials([string(credentialsId: 'NEXUS_USER_ID', variable: 'NEXUS_USER'),
+                        string(credentialsId: 'NEXUS_PASS_ID', variable: 'NEXUS_PASS'),
+                        string(credentialsId: 'NEXUS_URL_ID', variable: 'NEXUS_URL'),
+                        string(credentialsId: 'DB_USERNAME', variable: 'DB_USERNAME'),
+                        string(credentialsId: 'DB_PASSWORD', variable: 'DB_PASSWORD'),
+                        string(credentialsId: 'DB_URL', variable: 'DB_URL'),
+                        string(credentialsId: 'DB_PORT', variable: 'DB_PORT'),
+                        string(credentialsId: 'DB_NAME', variable: 'DB_NAME')]){
+                        sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/back_deploy.yaml --extra-vars "user=${NEXUS_USER} pass=${NEXUS_PASS} url=${NEXUS_URL} db_username=${DB_USERNAME} db_password=${DB_PASSWORD} db_url=${DB_URL} db_port=${DB_PORT} db_name=${DB_NAME}"'
+                    }
+            }
+        }
+
 
 
     }
