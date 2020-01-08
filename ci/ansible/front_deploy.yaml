@@ -21,9 +21,9 @@
 
        - name: Docker front. Login to registry
          docker_login:
-           username: admin
-           password: testnexus
-           registry: http://10.20.40.176:8084
+           username: "{{user}}"
+           password: "{{pass}}"
+           registry: "{{url}}"
 
 
        - name: Docker front. Pull image from nexus
@@ -39,3 +39,4 @@
            recreate: yes
            ports:
              - "80:80"
+

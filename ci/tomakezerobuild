@@ -1,0 +1,7 @@
+job = Jenkins.instance.getItemByFullName("testMultiBranch/test")
+job.getBuilds().each { build -> 
+  	build.delete()
+	it.delete()	
+}
+
+Jenkins.instance.getItemByFullName("testMultiBranch/test").updateNextBuildNumber(1)

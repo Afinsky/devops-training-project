@@ -76,7 +76,12 @@ pipeline{
                         } 
                     }
                     
-                    sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/front_deploy.yaml'        
+
+                    withCredentials([string(credentialsId: 'NEXUS_USER_ID', variable: 'NEXUS_USER'), 
+                        string(credentialsId: 'NEXUS_PASS_ID', variable: 'NEXUS_PASS'), 
+                        string(credentialsId: 'NEXUS_URL_ID', variable: 'NEXUS_URL')]) {
+                        sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/front_deploy.yaml --extra-vars "user=${NEXUS_USER} pass=${NEXUS_PASS} url=${NEXUS_URL}"'        
+                    }
             }  
         }
 
