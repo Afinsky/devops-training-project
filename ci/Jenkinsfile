@@ -76,7 +76,7 @@ pipeline{
                         } 
                     }
                     
-                    ansiblePlaybook(become: true, becomeUser: 'ubuntu', colorized: true, credentialsId: 'ssh_deploy_key', disableHostKeyChecking: true, forks: 4, inventory: 'ci/ansible/ec2.py', playbook: 'ci/ansible/front_deploy.yaml')
+                    sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/front_deploy.yaml'        
             }  
         }
 
