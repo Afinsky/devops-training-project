@@ -17,7 +17,7 @@ pipeline{
                 stage("Docker build Front image"){
                         steps{
                                 sh '''
-                                docker build -t 10.20.40.176:8084/frontapp -f docker/Dockerfile-front .
+                                docker build -t $registry/frontapp -f docker/Dockerfile-front .
                                 '''
                         }  
                 }
@@ -25,7 +25,7 @@ pipeline{
                 stage("Docker build Back image"){
                         steps{
                                 sh '''
-                                docker build -t 10.20.40.176:8084/backapp -f docker/Dockerfile-back .
+                                docker build -t $registry/backapp -f docker/Dockerfile-back .
                                 '''  
                         }  
                 }
@@ -42,7 +42,7 @@ pipeline{
                         steps{
                             withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
                                 sh '''
-                                docker push 10.20.40.176:8084/frontapp
+                                docker push $registry/frontapp
                                 '''
                             }
                         }  
@@ -52,7 +52,7 @@ pipeline{
                         steps{
                             withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
                                 sh '''
-                                docker push 10.20.40.176:8084/backapp
+                                docker push $registry/backapp
                                 '''  
                             }
                         }  
@@ -85,7 +85,15 @@ pipeline{
                         string(credentialsId: 'DB_URL', variable: 'DB_URL'),
                         string(credentialsId: 'DB_PORT', variable: 'DB_PORT'),
                         string(credentialsId: 'DB_NAME', variable: 'DB_NAME')]){
-                        sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/back_deploy.yaml --extra-vars "user=${NEXUS_USER} pass=${NEXUS_PASS} url=${NEXUS_URL} db_username=${DB_USERNAME} db_password=${DB_PASSWORD} db_url=${DB_URL} db_port=${DB_PORT} db_name=${DB_NAME}"'
+                        sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/back_deploy.yaml --extra-vars \
+                            "user=${NEXUS_USER} \
+                            pass=${NEXUS_PASS} \
+                            url=${NEXUS_URL} \
+                            db_username=${DB_USERNAME} \
+                            db_password=${DB_PASSWORD} \
+                            db_url=${DB_URL} \
+                            db_port=${DB_PORT} \
+                            db_name=${DB_NAME}"'.stripIndent()
                     }
             }
         }
@@ -97,6 +105,10 @@ pipeline{
         post{
             always{
                 echo "========always========"
+                
+                  sh '''
+                  echo y | docker image prune
+                  '''
             }
             success{
                 echo "========pipeline executed successfully ========"
