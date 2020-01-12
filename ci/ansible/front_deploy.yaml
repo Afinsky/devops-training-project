@@ -28,13 +28,13 @@
 
        - name: Docker front. Pull image from nexus
          docker_image:
-           name: "10.20.40.176:8084/frontapp"
+           name: "10.20.40.176:8084/frontapp:{{IMAGE_VERSION}}"
            source: pull
 
        - name: Docker front. Create container
          docker_container:
            name: fronapp_container
-           image: "10.20.40.176:8084/frontapp"
+           image: "10.20.40.176:8084/frontapp:{{IMAGE_VERSION}}"
            state: started
            recreate: yes
            ports:

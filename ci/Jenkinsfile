@@ -6,9 +6,50 @@ pipeline{
 
     environment{
       registry = "10.20.40.176:8084"
+
+
+      Version_Major = '0'
+      Version_Minor  = '0'
+      Version_Patch  = '0'
     }
 
+
+    parameters {
+      //string(defaultValue: "${Version_Major}.${Version_Minor}.${Version_Patch}", description: 'Specify build version', name: 'VERSION', trim: false)
+
+      string(defaultValue: '0.0.0', description: 'Specify build version', name: 'VERSION', trim: false)
+    }
+
+
+
     stages{ 
+
+
+        stage('Update build version'){
+          when { anyOf { branch 'dev'; branch 'test'; branch 'release' } }
+          steps {
+            script {
+              def previosVersion
+              def newVersion = "${params.VERSION}.0"
+              // Find last not failed or aborted build
+              def previosBuild = currentBuild.getPreviousBuild()
+              while ( previosBuild && ['FAILURE', 'ABORTED'].contains(previosBuild.getCurrentResult()) ) {
+                previosBuild = previosBuild.getPreviousBuild()
+              }
+
+              if ( previosBuild ) {
+                previosVersion = previosBuild.displayName
+                def (pMajor, pMinor, pPatch, pBuild) = previosVersion.tokenize('.').collect { it.isNumber() ? it.toInteger() : null }
+                if ( "${params.VERSION}" == "${pMajor}.${pMinor}.${pPatch}") {
+                  newVersion = "${pMajor}.${pMinor}.${pPatch}.${pBuild + 1}"
+                }
+              }
+              println("New version = ${newVersion} ; Previos version = ${previosVersion}")
+              buildName(newVersion)
+            }
+          }
+        }
+
 
 
         stage("Docker build images"){
@@ -17,7 +58,7 @@ pipeline{
                 stage("Docker build Front image"){
                         steps{
                                 sh '''
-                                docker build -t $registry/frontapp -f docker/Dockerfile-front .
+                                docker build -t $registry/frontapp:${currentBuild.displayName} -f docker/Dockerfile-front .
                                 '''
                         }  
                 }
@@ -25,7 +66,7 @@ pipeline{
                 stage("Docker build Back image"){
                         steps{
                                 sh '''
-                                docker build -t $registry/backapp -f docker/Dockerfile-back .
+                                docker build -t $registry/backapp:${currentBuild.displayName} -f docker/Dockerfile-back .
                                 '''  
                         }  
                 }
@@ -42,7 +83,7 @@ pipeline{
                         steps{
                             withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
                                 sh '''
-                                docker push $registry/frontapp
+                                docker push $registry/frontapp:${currentBuild.displayName}
                                 '''
                             }
                         }  
@@ -52,7 +93,7 @@ pipeline{
                         steps{
                             withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
                                 sh '''
-                                docker push $registry/backapp
+                                docker push $registry/backapp:${currentBuild.displayName}
                                 '''  
                             }
                         }  
@@ -68,7 +109,7 @@ pipeline{
                     withCredentials([string(credentialsId: 'NEXUS_USER_ID', variable: 'NEXUS_USER'), 
                         string(credentialsId: 'NEXUS_PASS_ID', variable: 'NEXUS_PASS'), 
                         string(credentialsId: 'NEXUS_URL_ID', variable: 'NEXUS_URL')]) {
-                        sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/front_deploy.yaml --extra-vars "user=${NEXUS_USER} pass=${NEXUS_PASS} url=${NEXUS_URL}"'        
+                        sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/front_deploy.yaml --extra-vars "user=${NEXUS_USER} pass=${NEXUS_PASS} url=${NEXUS_URL} IMAGE_VERSION=${currentBuild.displayName}"'        
                     }
             }  
         }
@@ -93,7 +134,8 @@ pipeline{
                             db_password=${DB_PASSWORD} \
                             db_url=${DB_URL} \
                             db_port=${DB_PORT} \
-                            db_name=${DB_NAME}"'.stripIndent()
+                            db_name=${DB_NAME} \
+                            IMAGE_VERSION=${currentBuild.displayName}"'.stripIndent()
                     }
             }
         }
