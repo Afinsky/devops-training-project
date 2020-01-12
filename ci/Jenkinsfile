@@ -18,38 +18,32 @@ pipeline{
       //string(defaultValue: "${Version_Major}.${Version_Minor}.${Version_Patch}", description: 'Specify build version', name: 'VERSION', trim: false)
 
       string(defaultValue: '0.0.0', description: 'Specify build version', name: 'VERSION', trim: false)
+      booleanParam(defaultValue: false, description: 'Set build version to 0', name: 'RESET_BUILD_VERSION')
     }
 
 
 
     stages{ 
 
-
         stage('Update build version'){
-          when { anyOf { branch 'dev'; branch 'test'; branch 'release' } }
-          steps {
-            script {
-              def previosVersion
-              def newVersion = "${params.VERSION}.0"
-              // Find last not failed or aborted build
-              def previosBuild = currentBuild.getPreviousBuild()
-              while ( previosBuild && ['FAILURE', 'ABORTED'].contains(previosBuild.getCurrentResult()) ) {
-                previosBuild = previosBuild.getPreviousBuild()
-              }
-
-              if ( previosBuild ) {
-                previosVersion = previosBuild.displayName
-                def (pMajor, pMinor, pPatch, pBuild) = previosVersion.tokenize('.').collect { it.isNumber() ? it.toInteger() : null }
-                if ( "${params.VERSION}" == "${pMajor}.${pMinor}.${pPatch}") {
-                  newVersion = "${pMajor}.${pMinor}.${pPatch}.${pBuild + 1}"
+            steps {
+                script {
+                    def version
+                    if ( env.RESET_BUILD_VERSION == true ) {
+                        version = VersionNumber(projectStartDate: '2000-01-01', 
+                        overrideBuildsAllTime: '0', 
+                        versionNumberString: '${VERSION}.${BUILDS_ALL_TIME}', 
+                        worstResultForIncrement: 'SUCCESS')
+                    } else {
+                        version = VersionNumber(projectStartDate: '2000-01-01', 
+                        versionNumberString: '${VERSION}.${BUILDS_ALL_TIME}', 
+                        worstResultForIncrement: 'SUCCESS')
+                    }
+                    env.VERSION = version
+                    buildName(version)
                 }
-              }
-              println("New version = ${newVersion} ; Previos version = ${previosVersion}")
-              buildName(newVersion)
             }
-          }
         }
-
 
 
         stage("Docker build images"){
@@ -58,7 +52,7 @@ pipeline{
                 stage("Docker build Front image"){
                         steps{
                                 sh '''
-                                docker build -t $registry/frontapp:${currentBuild.displayName} -f docker/Dockerfile-front .
+                                docker build -t $registry/frontapp:${VERSION} -f docker/Dockerfile-front .
                                 '''
                         }  
                 }
@@ -66,7 +60,7 @@ pipeline{
                 stage("Docker build Back image"){
                         steps{
                                 sh '''
-                                docker build -t $registry/backapp:${currentBuild.displayName} -f docker/Dockerfile-back .
+                                docker build -t $registry/backapp:${VERSION} -f docker/Dockerfile-back .
                                 '''  
                         }  
                 }
@@ -83,7 +77,7 @@ pipeline{
                         steps{
                             withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
                                 sh '''
-                                docker push $registry/frontapp:${currentBuild.displayName}
+                                docker push $registry/frontapp:${VERSION}
                                 '''
                             }
                         }  
@@ -93,7 +87,7 @@ pipeline{
                         steps{
                             withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
                                 sh '''
-                                docker push $registry/backapp:${currentBuild.displayName}
+                                docker push $registry/backapp:${VERSION}
                                 '''  
                             }
                         }  
@@ -109,7 +103,7 @@ pipeline{
                     withCredentials([string(credentialsId: 'NEXUS_USER_ID', variable: 'NEXUS_USER'), 
                         string(credentialsId: 'NEXUS_PASS_ID', variable: 'NEXUS_PASS'), 
                         string(credentialsId: 'NEXUS_URL_ID', variable: 'NEXUS_URL')]) {
-                        sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/front_deploy.yaml --extra-vars "user=${NEXUS_USER} pass=${NEXUS_PASS} url=${NEXUS_URL} IMAGE_VERSION=${currentBuild.displayName}"'        
+                        sh 'ansible-playbook -i ci/ansible/ec2.py ci/ansible/front_deploy.yaml --extra-vars "user=${NEXUS_USER} pass=${NEXUS_PASS} url=${NEXUS_URL} IMAGE_VERSION=${VERSION}"'        
                     }
             }  
         }
@@ -135,7 +129,7 @@ pipeline{
                             db_url=${DB_URL} \
                             db_port=${DB_PORT} \
                             db_name=${DB_NAME} \
-                            IMAGE_VERSION=${currentBuild.displayName}"'.stripIndent()
+                            IMAGE_VERSION=${VERSION}"'.stripIndent()
                     }
             }
         }
@@ -149,6 +143,8 @@ pipeline{
                 echo "========always========"
                 
                   sh '''
+                  docker rmi $registry/frontapp:${VERSION}
+                  docker rmi $registry/backapp:${VERSION}
                   echo y | docker image prune
                   '''
             }
