@@ -75,7 +75,7 @@ pipeline{
                 
                 stage("Docker push Front image"){
                         steps{
-                            withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
+                            withDockerRegistry(credentialsId: 'nexus_registry', url: "http://${registry}/repository/javaapp"){
                                 sh '''
                                 docker push $registry/frontapp:${VERSION}
                                 '''
@@ -85,7 +85,7 @@ pipeline{
                 
                 stage("Docker push Back image"){
                         steps{
-                            withDockerRegistry(credentialsId: 'nexus_registry', url: 'http://10.20.40.176:8084/repository/javaapp'){
+                            withDockerRegistry(credentialsId: 'nexus_registry', url: "http://${registry}/repository/javaapp"){
                                 sh '''
                                 docker push $registry/backapp:${VERSION}
                                 '''  
